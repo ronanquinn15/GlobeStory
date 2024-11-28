@@ -17,4 +17,21 @@ steps:
   inputs:
     rootFolderOrFile: '$(build.sourcesDirectory)'
     includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(build.artifactStagingDirectory)/$(Build.BuildId).zip'
+    replaceExistingArchive: true
+
 - task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(build.artifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
+
+- task: AzureStaticWebApp@0
+  inputs:
+    app_location: "./src"
+    output_location: "./src"
+    skip_app_build: true
+    api_location: ""
+    app_artifact_location: $(build.artifactStagingDirectory)/$(Build.BuildId).zip
+    azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
