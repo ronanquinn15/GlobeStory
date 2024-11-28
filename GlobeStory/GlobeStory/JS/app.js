@@ -19,6 +19,23 @@ UIAURI1 = "";
 //The URI of the Blob Storage Account
 BLOB_ACCOUNT = "https://blobstoragerq.blob.core.windows.net";
 
+//translator key
+key = "AnQq0WHTxK9dMbkZBHLJscXVshw9MKms2YWkbN2vxV8FDpN6WQAPJQQJ99AKAClhwhEXJ3w3AAAbACOGI2UP";
+location = "ukwest";
+endpoint = "https://api.cognitive.microsofttranslator.com/";
+path = "/translate";
+constructed_url = endpoint + path
+params = {
+    'api-version': '3.0',
+    'from': 'en',
+    'to': ['fr', 'zu']
+};
+headers = {
+    'Ocp-Apim-Subscription-Key': key,
+    'Ocp-Apim-Subscription-Region': location,
+    'Content-type': 'application/json',
+}
+
 
 //Handlers for button clicks
 $(document).ready(function () {
@@ -139,6 +156,26 @@ function getImages() {
             items.push("Description: " + val["description"] + "<br />");
             items.push('<button type="button" id="subNewForm" class="btn btn-danger" onclick="deleteAsset(\'' + val["id"] + '\')">Delete</button><br><br>');
             items.push("<hr />");
+        });
+
+        // Translate the description
+        $.ajax({
+            url: constructed_url,
+            type: 'POST',
+            headers: headers,
+            data: JSON.stringify([{ 'Text': val["description"] }]),
+            success: function (response) {
+                var translatedText = response[0].translations[0].text;
+                items.push("Description: " + translatedText + "<br />");
+                items.push('<button type="button" id="subNewForm" class="btn btn-danger" onclick="deleteAsset(\'' + val["id"] + '\')">Delete</button><br><br>');
+                items.push("<hr />");
+
+                $('#ImageList').empty();
+                $("<ul/>", {
+                    "class": "my-new-list",
+                    html: items.join("")
+                }).appendTo("#ImageList");
+            }
         });
 
         $('#ImageList').empty();
