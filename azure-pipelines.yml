@@ -29,8 +29,8 @@ steps:
 
 - task: AzureStaticWebApp@0
   inputs:
-    app_location: "./src"
-    output_location: "./src"
+    app_location: "/Users/ronanquinn/Desktop/GlobeStory"
+    output_location: "/Users/ronanquinn/Desktop/GlobeStory"
     skip_app_build: true
     api_location: ""
     app_artifact_location: $(build.artifactStagingDirectory)/$(Build.BuildId).zip
