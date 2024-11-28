@@ -13,6 +13,9 @@ env:
   AZURE_STATIC_WEB_APPS_API_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
 
 steps:
+- checkout: self
+  submodules: true
+
 - task: ArchiveFiles@2
   inputs:
     rootFolderOrFile: '$(build.sourcesDirectory)'
@@ -29,9 +32,6 @@ steps:
 
 - task: AzureStaticWebApp@0
   inputs:
-    app_location: "/Users/ronanquinn/Desktop/GlobeStory"
-    output_location: "/Users/ronanquinn/Desktop/GlobeStory"
-    skip_app_build: true
-    api_location: ""
-    app_artifact_location: $(build.artifactStagingDirectory)/$(Build.BuildId).zip
+    app_location: "./GlobeStory/GlobeStory"  # Assuming the root of your repository is your app location
+    output_location: ""  # Assuming the output is in the 'dist' directory, modify as per your build config
     azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
