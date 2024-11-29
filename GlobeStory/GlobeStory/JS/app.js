@@ -2,8 +2,7 @@
 IUPS = "https://prod-08.uksouth.logic.azure.com:443/workflows/bfd6e8b4bf39442ab2606b99363f6711/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=8nOk2epLiyxh7PvxI1R3e1uxJb_Ib6AC8GTpNPY8UQc";
 
 //The URI of the retrieve all images endpoint
-RAI = "https://prod-00.uksouth.logic.azure.com:443/workflows/ca0d346342204e40b89a887c38ef1a4b/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=dPeWrzDmZvG2Yt6mwJP3lxFqfs7gYD-5AabI1dm_SvY";
-
+RAI = "https://prod-00.uksouth.logic.azure.com/workflows/ca0d346342204e40b89a887c38ef1a4b/triggers/When_a_HTTP_request_is_received/paths/invoke/rest/v1/travel/%7Blangauge%7D?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=dPeWrzDmZvG2Yt6mwJP3lxFqfs7gYD-5AabI1dm_SvY";
 //The URI of the delete image endpoint
 DIAURI0 = "https://prod-30.uksouth.logic.azure.com/workflows/b76f4b1ebf5c43bdb130460d8579b9df/triggers/When_a_HTTP_request_is_received/paths/invoke/rest/v1/travel/";
 DIAURI1 = "?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=zStvrDLDQ5y-KDqrJ4Xo1rVSVBTCFvUp4UTxfA3kOls";
@@ -19,72 +18,106 @@ UIAURI1 = "";
 //The URI of the Blob Storage Account
 BLOB_ACCOUNT = "https://blobstoragerq.blob.core.windows.net";
 
-//translator key
-trans_key = "AnQq0WHTxK9dMbkZBHLJscXVshw9MKms2YWkbN2vxV8FDpN6WQAPJQQJ99AKAClhwhEXJ3w3AAAbACOGI2UP";
-trans_location = "ukwest";
-trans_endpoint = "https://api.cognitive.microsofttranslator.com/";
-trans_path = "/translate";
-constructed_url = trans_endpoint + trans_path
-params = {
-    'api-version': '3.0',
-    'from': 'en',
-    'to': ['fr']
-};
-headers = {
-    'Ocp-Apim-Subscription-Key': trans_key,
-    'Ocp-Apim-Subscription-Region': trans_location,
-    'Content-type': 'application/json',
-}
-
-
-//Handlers for button clicks
+// Ensure your jQuery DOM Ready wrapper to avoid executing before the DOM is loaded
 $(document).ready(function () {
-    $("#retImages").click(function () {
-        //Run the get asset list function
-        getImages();
-    });
-
-    //Handler for the new asset submission button
+    // Handler for the new asset submission button
     $("#subNewForm").click(function () {
-        //Execute the submit new asset function
+        // Execute the submit new asset function
         submitNewAsset();
     });
 
-    //Handler for the search button
+    // Handler for the search button
     $("#searchButton").click(function () {
-        //Run the search function
+        // Run the search function
         searchImages();
     });
 
-    //Handler for the sort dropdown change event
-    document.getElementById('sortDropdown').addEventListener('change', function() {
-        const sortValue = this.value;
-        sortImages(sortValue);
+    // Handler for language dropdown change
+    $('#languageDropdown').change(function () {
+        getImages();
     });
 
+    getImages();
 });
 
-function sortImages(order) {
-    const imageList = document.getElementById('ImageList');
-    const images = Array.from(imageList.getElementsByClassName('image-item'));
+// Constants for Azure Translator
+const TRANS_KEY = "AnQq0WHTxK9dMbkZBHLJscXVshw9MKms2YWkbN2vxV8FDpN6WQAPJQQJ99AKAClhwhEXJ3w3AAAbACOGI2UP";  // Replace with your actual subscription key
+const TRANS_LOCATION = "ukwest";
+const TRANS_ENDPOINT = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0";
 
-    images.sort((a, b) => {
-        const userIdA = a.getAttribute('data-user-id');
-        const userIdB = b.getAttribute('data-user-id');
-
-        if (order === 'asc') {
-            return userIdA.localeCompare(userIdB);
-        } else if (order === 'desc') {
-            return userIdB.localeCompare(userIdA);
-        } else {
-            return 0;
-        }
-    });
-
-    // Clear the current list and append sorted images
-    imageList.innerHTML = '';
-    images.forEach(image => imageList.appendChild(image));
+// Error handling for fetch responses
+async function handleFetchError(response) {
+    if (!response.ok) {
+        const message = `An error occurred: ${response.statusText}`;
+        throw new Error(message);
+    }
+    return response.json();
 }
+
+// Function to translate text using Azure Translator API
+async function translateText(text, toLang) {
+    const url = `${TRANS_ENDPOINT}&to=${toLang}`;
+
+    const options = {
+        method: 'POST',
+        headers: {
+            'Ocp-Apim-Subscription-Key': TRANS_KEY,
+            'Ocp-Apim-Subscription-Region': TRANS_LOCATION,
+            'Content-type': 'application/json'
+        },
+        body: JSON.stringify([{ 'text': text }])
+    };
+
+    try {
+        const response = await fetch(url, options);
+        const data = await handleFetchError(response);
+        return data[0].translations[0].text;
+    } catch (error) {
+        console.error('Error translating text:', error);
+        return text;  // Return the original text if translation fails
+    }
+}
+
+// Function to fetch images and handle translations
+async function getImages() {
+    $('#ImageList').html('<div class="spinner-border" role="status"><span class="sr-only"> &nbsp;</span>');
+
+    try {
+        const response = await fetch(RAI);
+        const data = await handleFetchError(response);
+
+        const items = [];
+        for (const val of data) {
+            const translatedDescription = await translateText(val["description"], $('#languageDropdown').val() || 'en');
+
+            items.push("<hr />");
+            items.push("Image ID: " + val["id"] + "<br />");
+            items.push("<img src='" + BLOB_ACCOUNT + val["filePath"] + "' width='200'/> <br />");
+            items.push("Filename: " + val["fileName"] + "<br />");
+            items.push("Uploaded by: " + val["userName"] + " (user ID: " + val["userID"] + ")<br />");
+            items.push("Description: " + translatedDescription + "<br />");
+            items.push('<button type="button" id="subNewForm" class="btn btn-danger" onclick="deleteAsset(\'' + val["id"] + '\')">Delete</button><br><br>');
+            items.push("<hr />");
+        }
+
+        $('#ImageList').empty();
+        $('<ul/>', {
+            "class": "my-new-list",
+            html: items.join("")
+        }).appendTo("#ImageList");
+    } catch (error) {
+        console.error('Error fetching images:', error);
+        $('#ImageList').html('<p class="text-danger">Failed to load images</p>');
+    }
+}
+
+// Event listener to the View Images button
+document.getElementById('retImages').addEventListener('click', function () {
+    getImages();
+});
+
+// Call getImages initially to load images on page load
+getImages();
 
 function searchImages() {
     var imageId = $('#searchInput').val();
@@ -137,33 +170,6 @@ function submitNewAsset() {
         success: function (data) {
             $('#newAssetForm')[0].reset();
         }
-    });
-}
-
-//A function to get a list of all the assets and write them to the Div with the AssetList Div
-function getImages() {
-    $('#ImageList').html('<div class="spinner-border" role="status"><span class="sr-only"> &nbsp;</span>');
-    $.getJSON(RAI, function (data) {
-        var items = [];
-
-        $.each(data, function (key, val) {
-            console.log(val);
-            items.push("<hr />");
-            items.push("Image ID: " + val["id"] + "<br />");
-            items.push("<img src='" + BLOB_ACCOUNT + val["filePath"] + "' width='200'/> <br />");
-            items.push("Filename: " + val["fileName"] + "<br />");
-            items.push("Uploaded by: " + val["userName"] + " (user ID: " + val["userID"] + ")<br />");
-            items.push("Description: " + val["description"] + "<br />");
-            items.push('<button type="button" id="subNewForm" class="btn btn-danger" onclick="deleteAsset(\'' + val["id"] + '\')">Delete</button><br><br>');
-            items.push("<hr />");
-        });
-
-        $('#ImageList').empty();
-
-        $("<ul/>", {
-            "class": "my-new-list",
-            html: items.join("")
-        }).appendTo("#ImageList");
     });
 }
 
