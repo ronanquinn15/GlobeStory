@@ -34,9 +34,11 @@ $(document).ready(function () {
 
     // Handler for language dropdown change
     $('#languageDropdown').change(function () {
+        // Refresh the image list with the new language
         getImages();
     });
 
+    // Load images on page load
     getImages();
 });
 
@@ -115,9 +117,6 @@ async function getImages() {
 document.getElementById('retImages').addEventListener('click', function () {
     getImages();
 });
-
-// Call getImages initially to load images on page load
-getImages();
 
 function searchImages() {
     var imageId = $('#searchInput').val();
