@@ -3,15 +3,16 @@ IUPS = "https://prod-08.uksouth.logic.azure.com:443/workflows/bfd6e8b4bf39442ab2
 
 //The URI of the retrieve all images endpoint
 RAI = "https://prod-00.uksouth.logic.azure.com/workflows/ca0d346342204e40b89a887c38ef1a4b/triggers/When_a_HTTP_request_is_received/paths/invoke/rest/v1/travel/%7Blangauge%7D?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=dPeWrzDmZvG2Yt6mwJP3lxFqfs7gYD-5AabI1dm_SvY";
-//The URI of the delete image endpoint
+
+//The split URI of the delete image endpoint
 DIAURI0 = "https://prod-30.uksouth.logic.azure.com/workflows/b76f4b1ebf5c43bdb130460d8579b9df/triggers/When_a_HTTP_request_is_received/paths/invoke/rest/v1/travel/";
 DIAURI1 = "?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=zStvrDLDQ5y-KDqrJ4Xo1rVSVBTCFvUp4UTxfA3kOls";
 
-//The URI of the retrieve image by ID endpoint
+//The split URI of the retrieve image by ID endpoint
 RIIURI0 = "https://prod-24.uksouth.logic.azure.com/workflows/ef1669ee408247c394067ae04e0345da/triggers/When_a_HTTP_request_is_received/paths/invoke/rest/v1/travel/";
 RIIURI1 = "?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=U3kPTMO_3theeUxoLpNxyIti4U8SPIlvN11ag98dKGA";
 
-//The URI of the update image by ID endpoint
+//The split URI of the update image by ID endpoint
 UIAURI0 = "";
 UIAURI1 = "";
 
@@ -30,16 +31,16 @@ const CONTENT_SAFETY_ENDPOINT = "https://cs-rq.cognitiveservices.azure.com/conte
 // Error handling for fetch responses
 async function handleFetchError(response) {
     if (!response.ok) {
-        const errorBody = await response.text();
-        const message = `An error occurred: ${response.statusText} - ${errorBody}`;
-        throw new Error(message);
+        const errorBody = await response.text(); // Get the error message body
+        const message = `An error occurred: ${response.statusText} - ${errorBody}`; // Construct the error message
+        throw new Error(message); // Throw an error with the message
     }
-    return response.json();
+    return response.json(); // Return the JSON response if successful
 }
 
 // Function to translate text using Azure Translator API
 async function translateText(text, toLang) {
-    const url = `${TRANS_ENDPOINT}&to=${toLang}`;
+    const url = `${TRANS_ENDPOINT}&to=${toLang}`; // Construct the URL with the target language
 
     const options = {
         method: 'POST',
@@ -54,7 +55,7 @@ async function translateText(text, toLang) {
     try {
         const response = await fetch(url, options);
         const data = await handleFetchError(response);
-        return data[0].translations[0].text;
+        return data[0].translations[0].text; // Return the translated text
     } catch (error) {
         console.error('Error translating text:', error);
         return text;  // Return the original text if translation fails
@@ -63,7 +64,7 @@ async function translateText(text, toLang) {
 
 // Function to moderate text using Azure Content Safety API
 async function analyseContent(description) {
-    const url = CONTENT_SAFETY_ENDPOINT;
+    const url = CONTENT_SAFETY_ENDPOINT; // Construct the URL
 
     const options = {
         method: 'POST',
@@ -73,7 +74,7 @@ async function analyseContent(description) {
         },
         body: JSON.stringify({
             "text": description,
-            "categories": ["Hate", "SelfHarm", "Violence", "Sexual"],
+            "categories": ["Hate", "SelfHarm", "Violence", "Sexual"], // Categories to analyse
             "blocklistNames": [],
             "haltOnBlocklistHit": true, 
             "outputType": "FourSeverityLevels"
@@ -86,9 +87,12 @@ async function analyseContent(description) {
         
         // Log the response for debugging
         console.log('Content Safety API Response:', data);
+        // Check if any unsafe categories were detected
         if (data.categoriesAnalysis && data.categoriesAnalysis.length > 0) {
             const unsafeCategories = data.categoriesAnalysis.filter(category => category.severity >= 6);
+            // Return the unsafe categories if any were detected
             if (unsafeCategories.length > 0) {
+                // Log the unsafe categories for debugging
                 return {
                     safe: false,
                     categories: unsafeCategories.map(cat => cat.category),
@@ -96,18 +100,20 @@ async function analyseContent(description) {
                 };
             }
         }
-        return { 
+        // Return safe if no unsafe categories were detected
+        return {
             safe: true, 
             categories: [], 
             severities: [] 
         };
     } catch (error) {
-        console.error('Error analyzing content:', error);
+        console.error('Error analysing content:', error);
+        // Return safe if analysis fails
         return { 
             safe: true, 
             categories: ["Error"], 
             severities: ["Error"] 
-        };  // Assume content is safe if analysis fails
+        };
     }
 }
 
@@ -142,6 +148,7 @@ $(document).ready(function () {
 
 // Function to fetch images and handle translations
 async function getImages() {
+    // Display a loading spinner while fetching images
     $('#ImageList').html('<div class="spinner-border" role="status"><span class="sr-only"> &nbsp;</span>');
 
     try {
@@ -150,8 +157,9 @@ async function getImages() {
 
         const items = [];
         for (const val of data) {
+            // Translate the description to the selected language from the dropdown
             const translatedDescription = await translateText(val["description"], $('#languageDropdown').val() || 'en');
-
+            // Construct the image list items
             items.push("<hr />");
             items.push("Image ID: " + val["id"] + "<br />");
             items.push("<img src='" + BLOB_ACCOUNT + val["filePath"] + "' width='200'/> <br />");
@@ -174,16 +182,18 @@ async function getImages() {
 }
 
 function searchImages() {
-    var imageId = $('#searchInput').val();
+    // Get the image ID from the search input
+    let imageId = $('#searchInput').val();
     if (imageId) {
-        $.getJSON(RIIURI0 + imageId + RIIURI1, function (data) {
-            var items = [];
-            items.push("<hr />");
+        // Fetch the image by ID if a specific ID is provided
+        $.getJSON(RIIURI0 + imageId + RIIURI1, async function (data) {
+            let items = [];
+            const translatedDescription = await translateText(data["description"], $('#languageDropdown').val() || 'en');            items.push("<hr />");
             items.push("Image ID: " + data["id"] + "<br />");
             items.push("<img src='" + BLOB_ACCOUNT + data["filePath"] + "' width='200'/> <br />");
             items.push("Filename: " + data["fileName"] + "<br />");
             items.push("Uploaded by: " + data["userName"] + " (user ID: " + data["userID"] + ")<br />");
-            items.push("Description: " + data["description"] + "<br />");
+            items.push("Description: " + translatedDescription + "<br />");
             items.push('<button type="button" id="subNewForm" class="btn btn-danger" onclick="deleteAsset(\'' + data["id"] + '\')">Delete</button><br><br>');
             items.push("<hr />");
 
@@ -211,6 +221,7 @@ async function submitNewAsset() {
         return false; // Do not submit the asset
     }
 
+    // Create a new FormData object to store the form data
     const submitData = new FormData();
     submitData.append("Filename", $('#FileName').val());
     submitData.append("userID", $('#userID').val());
@@ -228,7 +239,7 @@ async function submitNewAsset() {
         processData: false,
         type: 'POST',
         success: function (data) {
-            $('#newAssetForm')[0].reset();
+            $('#newAssetForm')[0].reset(); // Reset the form after submission
             getImages(); // Refresh the images list
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -238,6 +249,8 @@ async function submitNewAsset() {
 }
 
 function deleteAsset(id) {
+    // Delete the asset by ID
+    // Using ajax to delete the asset
     $.ajax({
         type: 'DELETE',
         url: DIAURI0 + id + DIAURI1,
@@ -249,6 +262,8 @@ function deleteAsset(id) {
 }
 
 function updateAsset(id){
+    // Update the asset by ID
+    // Using ajax to update the asset
     $.ajax({
         type: 'PUT',
         url: UIAURI0 + id + UIAURI1,
