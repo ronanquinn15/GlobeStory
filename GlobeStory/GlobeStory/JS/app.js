@@ -60,15 +60,15 @@ async function translateText(text, toLang) {
     }
 }
 
+// Function to moderate text using Azure Content Moderator API
 async function moderateText(text) {
-    // Call the Content Moderator API to check for inappropriate content
     const url = `${MOD_ENDPOINT}Text/Screen?language=eng`;
 
     const options = {
         method: 'POST',
         headers: {
             'Ocp-Apim-Subscription-Key': MOD_KEY,
-            'Content-type': 'application/json'
+            'Content-type': 'text/plain'
         },
         body: text
     };
@@ -172,10 +172,9 @@ function searchImages() {
             }).appendTo("#ImageList");
         }).fail(function (jqXHR, textStatus, errorThrown) {
             console.error('Error retrieving image:', textStatus, errorThrown);
-            $('#ImageList').html('<h4>No image found with the given ID.</h4>');
         });
     } else {
-        $('#ImageList').html('<h4>Please enter an Image ID to search.</h4>');
+        getImages(); // Display all images if no specific ID is given
     }
 }
 
@@ -189,7 +188,7 @@ async function submitNewAsset() {
         return; // Exit the function if the description is not safe
     }
 
-    submitData = new FormData();
+    const submitData = new FormData();
 
     //Construct JSON Object for new item
     submitData.append("Filename", $('#FileName').val());
@@ -206,7 +205,7 @@ async function submitNewAsset() {
         });
         const data = await handleFetchError(response); // Handle the response
         console.log(data); // Log the response data
-        $('#newAssetForm').reset(); // Reset the form
+        $('#assetForm')[0].reset(); // Use the native reset method on the form element
         getImages(); // Refresh the image list
     } catch (error) {
         console.error('Error submitting new asset:', error); // Log any errors
