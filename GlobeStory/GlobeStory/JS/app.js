@@ -18,34 +18,14 @@ UIAURI1 = "";
 //The URI of the Blob Storage Account
 BLOB_ACCOUNT = "https://blobstoragerq.blob.core.windows.net";
 
-// Ensure your jQuery DOM Ready wrapper to avoid executing before the DOM is loaded
-$(document).ready(function () {
-    // Handler for the new asset submission button
-    $("#subNewForm").click(function () {
-        // Execute the submit new asset function
-        submitNewAsset();
-    });
-
-    // Handler for the search button
-    $("#searchButton").click(function () {
-        // Run the search function
-        searchImages();
-    });
-
-    // Handler for language dropdown change
-    $('#languageDropdown').change(function () {
-        // Refresh the image list with the new language
-        getImages();
-    });
-
-    // Load images on page load
-    getImages();
-});
-
 // Constants for Azure Translator
 const TRANS_KEY = "AnQq0WHTxK9dMbkZBHLJscXVshw9MKms2YWkbN2vxV8FDpN6WQAPJQQJ99AKAClhwhEXJ3w3AAAbACOGI2UP";  // Replace with your actual subscription key
 const TRANS_LOCATION = "ukwest";
 const TRANS_ENDPOINT = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0";
+
+// Constants for Azure Content Moderator
+const MOD_KEY = "AO8T7JujE2fEz8QOlkpGE0rG1g0QufNWIT6AFiLQ8KXYYKEihqmeJQQJ99AKACmepeSXJ3w3AAAHACOG5iLW"
+const MOD_ENDPOINT = "https://cs-rq.cognitiveservices.azure.com/";
 
 // Error handling for fetch responses
 async function handleFetchError(response) {
@@ -80,6 +60,63 @@ async function translateText(text, toLang) {
     }
 }
 
+async function moderateText(text) {
+    const url = `${MOD_ENDPOINT}`;
+
+    const options = {
+        method: 'POST',
+        headers: {
+            'Ocp-Apim-Subscription-Key': MOD_KEY,
+            'Content-type': 'application/json'
+        },
+        body: JSON.stringify({ 'text': text })
+    };
+
+    try {
+        const response = await fetch(url, options);
+        const data = await handleFetchError(response);
+
+        // Check for moderation terms
+        if (data.Terms) {
+            return { safe: false, terms: data.Terms };
+        } else {
+            return { safe: true };
+        }
+    } catch (error) {
+        console.error('Error moderating content:', error);
+        return { safe: true };  // Assume content is safe if moderation fails
+    }
+}
+
+// Ensure your jQuery DOM Ready wrapper to avoid executing before the DOM is loaded
+$(document).ready(function () {
+    // Handler for the new asset submission button
+    $("#subNewForm").click(function () {
+        // Execute the submit new asset function
+        submitNewAsset();
+    });
+
+    // Handler for the search button
+    $("#searchButton").click(function () {
+        // Run the search function
+        searchImages();
+    });
+
+    // Handler for language dropdown change
+    $('#languageDropdown').change(function () {
+        // Refresh the image list with the new language
+        getImages();
+    });
+
+    $('#retImages').click(function () {
+        // Refresh the image list
+        getImages();
+    });
+
+    // Load images on page load
+    getImages();
+});
+
 // Function to fetch images and handle translations
 async function getImages() {
     $('#ImageList').html('<div class="spinner-border" role="status"><span class="sr-only"> &nbsp;</span>');
@@ -113,11 +150,6 @@ async function getImages() {
     }
 }
 
-// Event listener to the View Images button
-document.getElementById('retImages').addEventListener('click', function () {
-    getImages();
-});
-
 function searchImages() {
     var imageId = $('#searchInput').val();
     if (imageId) {
@@ -147,7 +179,15 @@ function searchImages() {
 }
 
 //A function to submit a new asset to the REST endpoint 
-function submitNewAsset() {
+async function submitNewAsset() {
+    const description = $('#Description').val(); // Get the description from the form
+    const moderationResult =  await moderateText(description); // Check the description for moderation terms
+
+    if (!moderationResult.safe) {
+        alert('The description contains inappropriate content. Please update it before submitting.');
+        return; // Exit the function if the description is not safe
+    }
+
     submitData = new FormData();
 
     //Construct JSON Object for new item
@@ -157,19 +197,18 @@ function submitNewAsset() {
     submitData.append("file", $('#UpFile')[0].files[0]);
     submitData.append("description", $('#Description').val());
 
-    //Post the JSON string to the endpoint, note the need to set the content type header
-    $.ajax({
-        url: IUPS,
-        data: submitData,
-        cache: false,
-        enctype: 'multipart/form-data',
-        contentType: false,
-        processData: false,
-        type: 'POST',
-        success: function (data) {
-            $('#newAssetForm')[0].reset();
-        }
-    });
+    //Submit the new asset to the REST endpoint
+    try {
+        const response = await fetch(IUPS, {
+            method: 'POST',
+            body: submitData
+        });
+        const data = await handleFetchError(response);
+        console.log(data);
+        getImages();
+    } catch (error) {
+        console.error('Error submitting new asset:', error);
+    }
 }
 
 function deleteAsset(id) {
