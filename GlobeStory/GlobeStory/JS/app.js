@@ -61,7 +61,8 @@ async function translateText(text, toLang) {
 }
 
 async function moderateText(text) {
-    const url = `${MOD_ENDPOINT}`;
+    // Call the Content Moderator API to check for inappropriate content
+    const url = `${MOD_ENDPOINT}Text/Screen?language=eng`;
 
     const options = {
         method: 'POST',
@@ -69,7 +70,7 @@ async function moderateText(text) {
             'Ocp-Apim-Subscription-Key': MOD_KEY,
             'Content-type': 'application/json'
         },
-        body: JSON.stringify({ 'text': text })
+        body: text
     };
 
     try {
@@ -195,7 +196,7 @@ async function submitNewAsset() {
     submitData.append("userID", $('#userID').val());
     submitData.append("userName", $('#userName').val());
     submitData.append("file", $('#UpFile')[0].files[0]);
-    submitData.append("description", $('#Description').val());
+    submitData.append("description", description);
 
     //Submit the new asset to the REST endpoint
     try {
@@ -203,11 +204,12 @@ async function submitNewAsset() {
             method: 'POST',
             body: submitData
         });
-        const data = await handleFetchError(response);
-        console.log(data);
-        getImages();
+        const data = await handleFetchError(response); // Handle the response
+        console.log(data); // Log the response data
+        $('#newAssetForm').reset(); // Reset the form
+        getImages(); // Refresh the image list
     } catch (error) {
-        console.error('Error submitting new asset:', error);
+        console.error('Error submitting new asset:', error); // Log any errors
     }
 }
 
