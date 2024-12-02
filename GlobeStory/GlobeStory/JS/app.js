@@ -17,7 +17,7 @@ UIAURI0 = "";
 UIAURI1 = "";
 
 //The URI of the Blob Storage Account
-BLOB_ACCOUNT = "https://blobstoragerq.blob.core.windows.net";
+const BLOB_ACCOUNT = "https://blobstoragerq.blob.core.windows.net";
 
 // Constants for Azure Translator
 const TRANS_KEY = "AnQq0WHTxK9dMbkZBHLJscXVshw9MKms2YWkbN2vxV8FDpN6WQAPJQQJ99AKAClhwhEXJ3w3AAAbACOGI2UP";  // Replace with your actual subscription key
@@ -184,10 +184,16 @@ async function getImages() {
 function searchImages() {
     // Get the image ID from the search input
     let imageId = $('#searchInput').val();
+
+    if (!imageId) {
+        alert("No ID provided"); // Alert the user if no ID is provided
+    }
+
     if (imageId) {
         // Fetch the image by ID if a specific ID is provided
         $.getJSON(RIIURI0 + imageId + RIIURI1, async function (data) {
             let items = [];
+            // Translate the description to the selected language from the dropdown
             const translatedDescription = await translateText(data["description"], $('#languageDropdown').val() || 'en');            items.push("<hr />");
             items.push("Image ID: " + data["id"] + "<br />");
             items.push("<img src='" + BLOB_ACCOUNT + data["filePath"] + "' width='200'/> <br />");
