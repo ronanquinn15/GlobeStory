@@ -23,14 +23,15 @@ const TRANS_KEY = "AnQq0WHTxK9dMbkZBHLJscXVshw9MKms2YWkbN2vxV8FDpN6WQAPJQQJ99AKA
 const TRANS_LOCATION = "ukwest";
 const TRANS_ENDPOINT = "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0";
 
-// Constants for Azure Content Moderator
-const MOD_KEY = "AO8T7JujE2fEz8QOlkpGE0rG1g0QufNWIT6AFiLQ8KXYYKEihqmeJQQJ99AKACmepeSXJ3w3AAAHACOG5iLW"
-const MOD_ENDPOINT = "https://cs-rq.cognitiveservices.azure.com/";
+// Constants for Azure Content Safety
+const CONTENT_SAFETY_KEY = "5TyJVH1ei7sqZM7484CZQq2YXTKDuqog93Vv6TroIohQPLIE35HvJQQJ99ALACmepeSXJ3w3AAAHACOG2BjJ"; // Replace with your actual Content Safety subscription key
+const CONTENT_SAFETY_ENDPOINT = "https://cs-rq.cognitiveservices.azure.com/contentsafety/text:analyze?api-version=2023-10-01"; 
 
 // Error handling for fetch responses
 async function handleFetchError(response) {
     if (!response.ok) {
-        const message = `An error occurred: ${response.statusText}`;
+        const errorBody = await response.text();
+        const message = `An error occurred: ${response.statusText} - ${errorBody}`;
         throw new Error(message);
     }
     return response.json();
@@ -60,32 +61,53 @@ async function translateText(text, toLang) {
     }
 }
 
-// Function to moderate text using Azure Content Moderator API
-async function moderateText(text) {
-    const url = `${MOD_ENDPOINT}Text/Screen?language=eng`;
+// Function to moderate text using Azure Content Safety API
+async function analyseContent(description) {
+    const url = CONTENT_SAFETY_ENDPOINT;
 
     const options = {
         method: 'POST',
         headers: {
-            'Ocp-Apim-Subscription-Key': MOD_KEY,
-            'Content-type': 'text/plain'
+            'Ocp-Apim-Subscription-Key': CONTENT_SAFETY_KEY,
+            'Content-Type': 'application/json'
         },
-        body: text
+        body: JSON.stringify({
+            "text": description,
+            "categories": ["Hate", "SelfHarm", "Violence", "Sexual"],
+            "blocklistNames": [],
+            "haltOnBlocklistHit": true, 
+            "outputType": "FourSeverityLevels"
+        })
     };
 
     try {
         const response = await fetch(url, options);
         const data = await handleFetchError(response);
-
-        // Check for moderation terms
-        if (data.Terms) {
-            return { safe: false, terms: data.Terms };
-        } else {
-            return { safe: true };
+        
+        // Log the response for debugging
+        console.log('Content Safety API Response:', data);
+        if (data.categoriesAnalysis && data.categoriesAnalysis.length > 0) {
+            const unsafeCategories = data.categoriesAnalysis.filter(category => category.severity >= 6);
+            if (unsafeCategories.length > 0) {
+                return {
+                    safe: false,
+                    categories: unsafeCategories.map(cat => cat.category),
+                    severities: unsafeCategories.map(cat => cat.severity)
+                };
+            }
         }
+        return { 
+            safe: true, 
+            categories: [], 
+            severities: [] 
+        };
     } catch (error) {
-        console.error('Error moderating content:', error);
-        return { safe: true };  // Assume content is safe if moderation fails
+        console.error('Error analyzing content:', error);
+        return { 
+            safe: true, 
+            categories: ["Error"], 
+            severities: ["Error"] 
+        };  // Assume content is safe if analysis fails
     }
 }
 
@@ -105,7 +127,7 @@ $(document).ready(function () {
 
     // Handler for language dropdown change
     $('#languageDropdown').change(function () {
-        // Refresh the image list with the new language
+        // Refresh the image list with t1he new language
         getImages();
     });
 
@@ -178,38 +200,41 @@ function searchImages() {
     }
 }
 
-//A function to submit a new asset to the REST endpoint 
 async function submitNewAsset() {
     const description = $('#Description').val(); // Get the description from the form
-    const moderationResult =  await moderateText(description); // Check the description for moderation terms
 
-    if (!moderationResult.safe) {
-        alert('The description contains inappropriate content. Please update it before submitting.');
-        return; // Exit the function if the description is not safe
+    // Analyse the description before submitting
+    const contentAnalysisResult = await analyseContent(description);
+
+    if (!contentAnalysisResult.safe) {
+        alert(`The description contains inappropriate content: ${contentAnalysisResult.categories.join(', ')}. Severities: ${contentAnalysisResult.severities.join(', ')}`);
+        return false; // Do not submit the asset
     }
 
     const submitData = new FormData();
-
-    //Construct JSON Object for new item
     submitData.append("Filename", $('#FileName').val());
     submitData.append("userID", $('#userID').val());
     submitData.append("userName", $('#userName').val());
     submitData.append("file", $('#UpFile')[0].files[0]);
     submitData.append("description", description);
 
-    //Submit the new asset to the REST endpoint
-    try {
-        const response = await fetch(IUPS, {
-            method: 'POST',
-            body: submitData
-        });
-        const data = await handleFetchError(response); // Handle the response
-        console.log(data); // Log the response data
-        $('#assetForm')[0].reset(); // Use the native reset method on the form element
-        getImages(); // Refresh the image list
-    } catch (error) {
-        console.error('Error submitting new asset:', error); // Log any errors
-    }
+    // Post the JSON string to the endpoint, note the need to set the content type header
+    $.ajax({
+        url: IUPS,
+        data: submitData,
+        cache: false,
+        enctype: 'multipart/form-data',
+        contentType: false,
+        processData: false,
+        type: 'POST',
+        success: function (data) {
+            $('#newAssetForm')[0].reset();
+            getImages(); // Refresh the images list
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.error('Error submitting asset:', textStatus, errorThrown);
+        }
+    });
 }
 
 function deleteAsset(id) {
