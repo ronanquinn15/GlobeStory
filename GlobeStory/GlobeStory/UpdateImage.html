@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update Image</title>
+    <link rel="stylesheet" type="text/css" href="CSS/bootstrap.min.css">
+    <script type="text/javascript" src="JS/bootstrap.js"></script>
+    <script type="text/javascript" src="JS/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="JS/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" src="JS/app.js"></script>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="row align-items-start">
+        <div class="col-2" style="text-align: left;">
+            <h3><a href="index.html" style="text-decoration: none; color: inherit;">Globe Story</a></h3>
+        </div>
+        <div class="col-8" style="text-align: center;">
+            <h3>Update Image</h3>
+        </div>
+        <div class="col-2"></div>
+    </div>
+
+    <!-- Search and Update Form -->
+    <div class="row align-items-start">
+        <div class="col-2"></div>
+        <div class="col-8" style="text-align: left; border-bottom:1px solid #222222;">
+            <div class="mb-3">
+                <label for="searchInput" class="form-label">Search Image by ID</label>
+                <input type="text" class="form-control" id="searchInput">
+                <button type="button" class="btn btn-primary mt-2" onclick="searchImage()">Search</button>
+            </div>
+            <div id="imageForm" style="display: none;">
+                <form id="updateImageForm">
+                    <div class="mb-3">
+                        <label for="FileName" class="form-label">File Name</label>
+                        <input type="text" class="form-control" id="FileName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="userID" class="form-label">User Id</label>
+                        <input type="text" class="form-control" id="userID">
+                    </div>
+                    <div class="mb-3">
+                        <label for="userName" class="form-label">User Name</label>
+                        <input type="text" class="form-control" id="userName">
+                    </div>
+                    <div class="mb-3">
+                        <label for="Description" class="form-label">Description</label>
+                        <input type="text" class="form-control" id="Description">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="updateImage()">Update</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-2"></div>
+    </div>
+</div>
+<script>
+    function searchImage() {
+        let imageId = $('#searchInput').val();
+        if (!imageId) {
+            alert("No ID provided");
+            return;
+        }
+
+        $.getJSON(RIIURI0 + imageId + RIIURI1, function (data) {
+            $('#FileName').val(data.fileName);
+            $('#userID').val(data.userID);
+            $('#userName').val(data.userName);
+            $('#Description').val(data.description);
+            $('#imageForm').show();
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.error('Error retrieving image:', textStatus, errorThrown);
+            alert('Error retrieving image');
+        });
+    }
+
+    function updateImage() {
+        let imageId = $('#searchInput').val();
+        let updatedData = {
+            fileName: $('#FileName').val(),
+            userID: $('#userID').val(),
+            userName: $('#userName').val(),
+            description: $('#Description').val()
+        };
+
+        $.ajax({
+            type: 'PUT',
+            url: UIAURI0 + imageId + UIAURI1,
+            data: JSON.stringify(updatedData),
+            contentType: 'application/json',
+            success: function (data) {
+                alert('Image updated successfully');
+                $('#updateImageForm')[0].reset();
+                $('#imageForm').hide();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error('Error updating image:', textStatus, errorThrown);
+                alert('Error updating image');
+            }
+        });
+    }
+</script>
+</body>
+</html>
