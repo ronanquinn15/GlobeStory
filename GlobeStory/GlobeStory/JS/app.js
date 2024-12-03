@@ -12,10 +12,6 @@ DIAURI1 = "?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_recei
 RIIURI0 = "https://prod-24.uksouth.logic.azure.com/workflows/ef1669ee408247c394067ae04e0345da/triggers/When_a_HTTP_request_is_received/paths/invoke/rest/v1/travel/";
 RIIURI1 = "?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=U3kPTMO_3theeUxoLpNxyIti4U8SPIlvN11ag98dKGA";
 
-//The split URI of the update image by ID endpoint
-UIAURI0 = "";
-UIAURI1 = "";
-
 //The URI of the Blob Storage Account
 const BLOB_ACCOUNT = "https://blobstoragerq.blob.core.windows.net";
 
@@ -266,17 +262,3 @@ function deleteAsset(id) {
         console.error('Error deleting asset:', textStatus, errorThrown);
     });
 }
-
-function updateAsset(id){
-    // Update the asset by ID
-    // Using ajax to update the asset
-    $.ajax({
-        type: 'PUT',
-        url: UIAURI0 + id + UIAURI1,
-    }).done(function (msg) {
-        getImages();
-    }).fail(function (jqXHR, textStatus, errorThrown) {
-        console.error('Error updating asset:', textStatus, errorThrown);
-    });
-}
-

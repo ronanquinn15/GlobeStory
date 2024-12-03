@@ -18,13 +18,10 @@
     <div class="col-8" style="text-align: left;">
         <div class="row" style="padding:5px;">
             <div class="col-auto">
-                <button id="retImages" type="button" class="btn btn-primary">View Images</button>
+                <button id="retImages" type="button" class="btn btn-primary">View Content</button>
             </div>
             <div class="col-auto">
-                <button id="addImage" type="button" class="btn btn-primary" onclick="location.href='IUPS.html'">Add an image</button>
-            </div>
-            <div class="col-auto">
-                <button type="button" id="updateButton" class="btn btn-primary" onclick="location.href='UpdateImage.html' ">Update</button>
+                <button id="addImage" type="button" class="btn btn-primary" onclick="location.href='IUPS.html'">Add Content</button>
             </div>
             <div class="col-auto" style="margin-left: auto; ">
                 <input type="text" id="searchInput" class="form-control" placeholder="Search by Image ID" style="width: 400px;">
@@ -32,8 +29,8 @@
             <div class="col-auto">
                 <button type="button" id="searchButton" class="btn btn-primary">Search</button>
             </div>
-            <div class="col-auto" style="margin-top: 20px;">
-                <select id="languageDropdown" class="form-select">
+            <div class="col-auto" style="display: flex; align-items: center;">
+                <select id="languageDropdown" class="form-select" style="margin-left: 10px;">
                     <option value="en">English</option>
                     <option value="fr">French</option>
                     <option value="ja">Japanese</option>
